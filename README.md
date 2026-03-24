@@ -28,7 +28,7 @@ _XBOX Controller_
 ros2 run joy joy_node
 ros2 run haptic_servo joy_servo --ros-args -p ref_frame:=base_link  --ros-args -p eef_frame:=tool0
 ```
-_MoveIT_
+_3D Phantom_
 ``` bash
 ros2 run omni_common omni
 ros2 run haptic_servo phantom_servo --ros-args -p ref_frame:=base_link  --ros-args -p eef_frame:=tool0
