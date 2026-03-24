@@ -508,7 +508,7 @@ dependencies = [
 
 [[package]]
 name = "geometry_msgs"
-version = "5.3.6"
+version = "5.3.7"
 dependencies = [
  "builtin_interfaces",
  "rosidl_runtime_rs",
@@ -850,7 +850,7 @@ checksum = "d68f2ec51b097e4c1a75b681a8bec621909b5e91f15bb7b840c4f2f7b01148b2"
 
 [[package]]
 name = "sensor_msgs"
-version = "5.3.6"
+version = "5.3.7"
 dependencies = [
  "builtin_interfaces",
  "geometry_msgs",
@@ -899,7 +899,7 @@ dependencies = [
 
 [[package]]
 name = "shape_msgs"
-version = "5.3.6"
+version = "5.3.7"
 dependencies = [
  "geometry_msgs",
  "rosidl_runtime_rs",
@@ -920,7 +920,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "std_msgs"
-version = "5.3.6"
+version = "5.3.7"
 dependencies = [
  "builtin_interfaces",
  "rosidl_runtime_rs",
@@ -1021,7 +1021,7 @@ dependencies = [
 
 [[package]]
 name = "trajectory_msgs"
-version = "5.3.6"
+version = "5.3.7"
 dependencies = [
  "builtin_interfaces",
  "geometry_msgs",
@@ -1184,97 +1184,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7249219f66ced02969388cf2bb044a09756a083d0fab1e566056b04d9fbcaa5"
 
 [[patch.unused]]
-name = "actionlib_msgs"
-version = "5.3.6"
-
-[[patch.unused]]
-name = "composition_interfaces"
-version = "2.0.3"
-
-[[patch.unused]]
-name = "diagnostic_msgs"
-version = "5.3.6"
-
-[[patch.unused]]
 name = "example_interfaces"
 version = "0.12.0"
-
-[[patch.unused]]
-name = "examples_rclrs_logging_demo"
-version = "0.5.0"
-
-[[patch.unused]]
-name = "examples_rclrs_message_demo"
-version = "0.5.0"
-
-[[patch.unused]]
-name = "examples_rclrs_minimal_client_service"
-version = "0.5.0"
-
-[[patch.unused]]
-name = "examples_rclrs_minimal_pub_sub"
-version = "0.5.0"
-
-[[patch.unused]]
-name = "examples_rclrs_parameter_demo"
-version = "0.5.0"
-
-[[patch.unused]]
-name = "examples_rclrs_worker_demo"
-version = "0.5.0"
-
-[[patch.unused]]
-name = "haptic_servo"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "lifecycle_msgs"
-version = "2.0.3"
-
-[[patch.unused]]
-name = "nav_msgs"
-version = "5.3.6"
-
-[[patch.unused]]
-name = "rcl_interfaces"
-version = "2.0.3"
 
 [[patch.unused]]
 name = "rclrs_example_msgs"
 version = "0.5.0"
 
 [[patch.unused]]
-name = "rosgraph_msgs"
-version = "2.0.3"
-
-[[patch.unused]]
-name = "rust_pubsub"
-version = "0.5.0"
-
-[[patch.unused]]
-name = "statistics_msgs"
-version = "2.0.3"
-
-[[patch.unused]]
-name = "std_srvs"
-version = "5.3.6"
-
-[[patch.unused]]
-name = "stereo_msgs"
-version = "5.3.6"
-
-[[patch.unused]]
-name = "test_msgs"
-version = "2.0.3"
-
-[[patch.unused]]
 name = "tf2_rs"
 version = "0.1.0"
-
-[[patch.unused]]
-name = "type_description_interfaces"
-version = "2.0.3"
-
-[[patch.unused]]
-name = "visualization_msgs"
-version = "5.3.6"

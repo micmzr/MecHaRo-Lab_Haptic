@@ -1,0 +1,6 @@
+ws_ros2_hapitic/.vscode/
+ws_ros2_hapitic/build/
+ws_ros2_hapitic/install/  
+ws_ros2_hapitic/log/
+ws_ros2_hapitic/.cargo/
+ws_ros2_hapitic/src/haptic_servo/Cargo.lock

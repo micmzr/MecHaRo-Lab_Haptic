@@ -11,7 +11,7 @@ omni_msgs = "*"
 geometry_msgs = "*"
 std_msgs = "*"
 sensor_msgs = "*"
-tf2_rs = {path = "../../ros2-rust/src/tf2_rs"}
+tf2_rs = {path = "../../ros-rust/src/tf2_rs"}
 tf2_msgs = "*"
 
 [[bin]]
