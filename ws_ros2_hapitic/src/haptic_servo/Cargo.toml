@@ -1,0 +1,33 @@
+[package]
+name = "haptic_servo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rclrs = "0.7"
+builtin_interfaces = "*"
+moveit_msgs = "*"
+omni_msgs = "*"
+geometry_msgs = "*"
+std_msgs = "*"
+sensor_msgs = "*"
+tf2_rs = {path = "../../ros2-rust/src/tf2_rs"}
+tf2_msgs = "*"
+
+[[bin]]
+name = "joy_servo"
+path = "src/joy_servo.rs"
+
+[[bin]]
+name = "phantom_servo"
+path = "src/phantom_servo.rs"
+
+[profile.dev]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

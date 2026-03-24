@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<?xml-model
+   href="http://download.ros.org/schema/package_format3.xsd"
+   schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>haptic_servo</name>
+  <maintainer email="micmazur@pg.edu.pl">Michał Mazur</maintainer>
+  <version>0.1.0</version>
+  <description>Package containing a connecting utility between a Omni haptic device and MoveIt servo and force sensor</description>
+  <license>Apache License 2.0</license>
+
+  <depend>rclrs</depend>
+  <depend>rosidl_runtime_rs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>builtin_interfaces</depend>
+  <depend>omni_msgs</depend>
+  <depend>moveit_msgs</depend>
+  <depend>tf2_rs</depend>
+  <depend>tf2_msgs</depend>
+
+  <export>
+    <build_type>ament_cargo</build_type>
+  </export>
+</package>
