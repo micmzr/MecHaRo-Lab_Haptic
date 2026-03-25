@@ -1,9 +1,13 @@
+mod quaternions;
+
 use rclrs::*;
-use tf2_rs::*;
+use tf2_rs::{
+    BufferCore, TransformListener, TransformStamped, LookupTime,
+};
 use std::{thread, time::Duration};
 use std::sync::{Arc, Mutex};
 use geometry_msgs::msg::PoseStamped as PoseStampedMsg;
-// use omni_msgs::msg::OmniState as OmniStateMsg;
+use omni_msgs::msg::OmniButtonEvent as OmniButtonEventMsg;
 
 struct ServoPublisherNode {
     #[allow(unused)]
@@ -29,13 +33,44 @@ impl ServoPublisherNode {
         if let Some(transform) = &self.tf {
             log_debug!(self.node.logger(), "Got transform : {} to {}", transform.parent_frame.as_str(), transform.child_frame.as_str());
         } else {
-            log_error!(self.node.logger(), "No transform available, cannot publish servo command");
+            log_warn!(self.node.logger(), "No transform available, cannot publish servo command");
+            thread::sleep(Duration::from_millis(1000));
             return Err(RclrsError::UnknownRclError { code: -1, msg: None });
         }
 
         let stamp_ = Clock::system().now().to_ros_msg().unwrap();
 
         let transform = self.tf.as_ref().unwrap();
+
+        // axis transform
+        let q_rob = quaternions::Quaternion {
+            x: transform.rotation[0],
+            y: transform.rotation[2],
+            z: transform.rotation[1],
+            w: transform.rotation[3],
+        };
+
+        // assumimg q_phantome is delta
+        let q_phantom = quaternions::Quaternion::from(phantom_msg.pose.orientation);
+
+        let q_new = q_phantom.multiply(&q_rob);
+
+        // limit the rotation to 45 degrees in each axis to avoid singularities in the robot
+        let (mut roll, mut pitch, mut yaw) = q_new.to_rpy();
+
+        if roll.abs() > std::f64::consts::FRAC_PI_4 {
+            roll = roll.signum() * std::f64::consts::FRAC_PI_4;
+        }
+
+        if pitch.abs() > std::f64::consts::FRAC_PI_4 {
+            pitch = pitch.signum() * std::f64::consts::FRAC_PI_4;
+        }
+
+        if yaw.abs() > std::f64::consts::FRAC_PI_4 {
+            yaw = yaw.signum() * std::f64::consts::FRAC_PI_4;
+        }
+
+        let q_new = quaternions::Quaternion::from_rpy(roll, pitch, yaw);
 
         let msg: PoseStampedMsg = PoseStampedMsg {
             header: std_msgs::msg::Header {
@@ -52,6 +87,8 @@ impl ServoPublisherNode {
                     y: transform.translation[1]  + (phantom_msg.pose.position.z) as f64,
                     z: transform.translation[2]  + (phantom_msg.pose.position.y) as f64,
                 },
+                orientation: q_new.to_ros_msg(),
+                /* 
                 orientation: geometry_msgs::msg::Quaternion {
                     x: transform.rotation[0],
                     y: transform.rotation[1],
@@ -61,7 +98,7 @@ impl ServoPublisherNode {
                     // y: phantom_msg.pose.orientation.z,
                     // z: phantom_msg.pose.orientation.y,
                     // w: phantom_msg.pose.orientation.w,                    
-                },
+                },*/
             },
         };
         self.publisher.publish(msg).unwrap();
@@ -161,6 +198,56 @@ fn main() -> Result<(), RclrsError> {
             },
         ).unwrap();
 
+    let n_name = node_name.as_str().to_string();
+
+    let _sub_button = serv_pub_ptr_clone.try_lock().unwrap().node.clone()
+        .create_subscription(
+            "/phantom/button",
+            move |msg: OmniButtonEventMsg| {
+                log_debug!(&n_name, "Received button event: grey button {} white button {}", msg.grey_button, msg.white_button);
+                if msg.white_button == 1 && msg.grey_button == 0 {
+                    log_info!(&n_name, "Sending close gripper command");
+                    let goal = control_msgs::action::FollowJointTrajectory_Goal {
+                        trajectory: trajectory_msgs::msg::JointTrajectory {
+                            joint_names: vec!["finger1".to_string()],
+                            points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
+                                positions: vec![0.025],
+                                time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                                ..Default::default()
+                            }],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    if let Ok(_reqeust) = action_gripper.try_request_goal(goal) {
+                        log_info!(&n_name, "Gripper close command sent successfully");
+                    } else {
+                        log_warn!(&n_name, "Failed to send gripper close command");
+                    }
+                }
+                else if msg.white_button == 0 && msg.grey_button == 1 {
+                    log_info!(&n_name, "Sending open gripper command");
+                    let goal = control_msgs::action::FollowJointTrajectory_Goal {
+                        trajectory: trajectory_msgs::msg::JointTrajectory {
+                            joint_names: vec!["finger1".to_string()],
+                            points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
+                                positions: vec![0.0],
+                                time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                                ..Default::default()
+                            }],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    if let Ok(_reqeust) = action_gripper.try_request_goal(goal) {
+                        log_info!(&n_name, "Gripper open command sent successfully");
+                    } else {
+                        log_warn!(&n_name, "Failed to send gripper open command");
+                    }
+                }
+            },
+        ).unwrap();
+
     let msg_pub = Arc::clone(&msg_);
 
     thread::spawn(move || loop {
@@ -169,7 +256,7 @@ fn main() -> Result<(), RclrsError> {
             if let Ok(()) = serv_pub_ptr_clone.try_lock().unwrap().publish_data(msg) {
                 // Do nothing
             } else {
-                log_error!(node_name.as_str(), "Error in publishing servo command");
+                log_debug!(node_name.as_str(), "Error in publishing servo command");
                 // break;
             }
         }       

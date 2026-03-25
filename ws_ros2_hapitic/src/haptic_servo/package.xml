@@ -13,6 +13,7 @@
   <depend>rosidl_runtime_rs</depend>
   <depend>geometry_msgs</depend>
   <depend>control_msgs</depend>
+  <depend>trajectory_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>builtin_interfaces</depend>

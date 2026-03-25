@@ -5,3 +5,13 @@ ws_ros2_hapitic/log/
 ws_ros2_hapitic/.cargo/
 ws_ros2_hapitic/src/haptic_servo/Cargo.lock
 ws_ros2_hapitic/src/haptic_servo/target/
+ws_ros2_hapitic/src/.vscode/
+ws_ros2_hapitic/src/build/
+ws_ros2_hapitic/src/install/
+ws_ros2_hapitic/src/log/
+ws_ros2_hapitic/src/.cargo/
+ws_ros2_hapitic/ros-rust/.vscode/
+ws_ros2_hapitic/ros-rust/build/
+ws_ros2_hapitic/ros-rust/install/
+ws_ros2_hapitic/ros-rust/log/
+ws_ros2_hapitic/ros-rust/.cargo/

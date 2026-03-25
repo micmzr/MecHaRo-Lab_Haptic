@@ -10,6 +10,7 @@ moveit_msgs = "*"
 control_msgs = "*"
 omni_msgs = "*"
 geometry_msgs = "*"
+trajectory_msgs = "*"
 std_msgs = "*"
 sensor_msgs = "*"
 tf2_rs = {path = "../../ros-rust/src/tf2_rs"}
