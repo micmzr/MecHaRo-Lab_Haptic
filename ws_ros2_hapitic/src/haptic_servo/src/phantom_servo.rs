@@ -103,6 +103,10 @@ fn main() -> Result<(), RclrsError> {
         .clone()
         .create_client::<moveit_msgs::srv::ServoCommandType>("/servo_node/switch_command_type")?;
 
+    let action_gripper = serv_pub
+        .node
+        .clone()
+        .create_action_client::<control_msgs::action::FollowJointTrajectory>("/gripper_controller/follow_joint_trajectory")?;
 
     let ref_frame_str = ref_frame.get().clone().unwrap().as_ref().to_string();
     let eef_frame_str = eef_frame.get().clone().unwrap().as_ref().to_string();

@@ -37,3 +37,6 @@
 [submodule "ws_ros2_hapitic/ros-rust/src/tf2_rs"]
 	path = ws_ros2_hapitic/ros-rust/src/tf2_rs
 	url = https://github.com/olingo99/tf2_rs.git
+[submodule "ws_ros2_hapitic/ros-rust/src/control_msgs"]
+	path = ws_ros2_hapitic/ros-rust/src/control_msgs
+	url = https://github.com/ros-controls/control_msgs.git

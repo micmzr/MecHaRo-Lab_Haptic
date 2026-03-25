@@ -270,6 +270,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "control_msgs"
+version = "5.8.0"
+dependencies = [
+ "action_msgs",
+ "builtin_interfaces",
+ "geometry_msgs",
+ "rosidl_runtime_rs",
+ "sensor_msgs",
+ "service_msgs",
+ "std_msgs",
+ "trajectory_msgs",
+ "unique_identifier_msgs",
+]
+
+[[package]]
 name = "crossbeam-utils"
 version = "0.8.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -544,6 +559,7 @@ name = "haptic_servo"
 version = "0.1.0"
 dependencies = [
  "builtin_interfaces",
+ "control_msgs",
  "geometry_msgs",
  "moveit_msgs",
  "omni_msgs",
