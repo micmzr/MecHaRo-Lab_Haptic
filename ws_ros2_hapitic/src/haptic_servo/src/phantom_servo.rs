@@ -45,8 +45,8 @@ impl ServoPublisherNode {
         // axis transform
         let q_rob = quaternions::Quaternion {
             x: transform.rotation[0],
-            y: transform.rotation[2],
-            z: transform.rotation[1],
+            y: transform.rotation[1],
+            z: transform.rotation[2],
             w: transform.rotation[3],
         };
 
