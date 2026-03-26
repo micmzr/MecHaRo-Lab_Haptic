@@ -1,3 +1,4 @@
+use std::fmt; 
 
 #[derive(Debug, Clone, Default)]
 pub struct Quaternion {
@@ -17,6 +18,14 @@ impl From<geometry_msgs::msg::Quaternion> for Quaternion {
         }
     }
 }
+
+impl fmt::Display for Quaternion {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Use `self.number` to refer to each positional data point.
+        write!(f, "(x : {}, y : {}, z : {}, w : {})", self.x, self.y, self.z, self.w)
+    }
+}
+
 
 impl Quaternion {
     pub fn to_ros_msg(&self) -> geometry_msgs::msg::Quaternion {

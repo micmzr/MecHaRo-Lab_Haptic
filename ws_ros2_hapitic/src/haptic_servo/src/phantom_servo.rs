@@ -50,27 +50,39 @@ impl ServoPublisherNode {
             w: transform.rotation[3],
         };
 
-        // assumimg q_phantome is delta
+        let q_inkwell = quaternions::Quaternion {
+            x: -0.2072416477963069, 
+            y: -0.003910005128970363, 
+            z: -0.002516783525819699, 
+            w: 0.9782787317933714,
+        };
+ 
         let q_phantom = quaternions::Quaternion::from(phantom_msg.pose.orientation);
+                
+        println!("g_pahntom: {}",q_phantom);
+
+        let q_phantom = q_inkwell.delta(&q_phantom);
+        
+        // limit the rotation to 45 degrees in each axis to avoid singularities in the robot
+        let (mut roll, mut pitch, mut yaw) = q_phantom.to_rpy();
+
+        log_info!(self.node.logger(), "Got roll: {} pitch: {} yaw: {}", roll, pitch, yaw);
+
+        if roll.abs() > std::f64::consts::FRAC_PI_8 {
+            roll = roll.signum() * std::f64::consts::FRAC_PI_8;
+        }
+
+        if pitch.abs() > std::f64::consts::FRAC_PI_8 {
+            pitch = pitch.signum() * std::f64::consts::FRAC_PI_8;
+        }
+
+        if yaw.abs() > std::f64::consts::FRAC_PI_8 {
+            yaw = yaw.signum() * std::f64::consts::FRAC_PI_8;
+        }
+
+        let q_phantom = quaternions::Quaternion::from_rpy(roll, pitch, yaw);
 
         let q_new = q_phantom.multiply(&q_rob);
-
-        // limit the rotation to 45 degrees in each axis to avoid singularities in the robot
-        let (mut roll, mut pitch, mut yaw) = q_new.to_rpy();
-
-        if roll.abs() > std::f64::consts::FRAC_PI_4 {
-            roll = roll.signum() * std::f64::consts::FRAC_PI_4;
-        }
-
-        if pitch.abs() > std::f64::consts::FRAC_PI_4 {
-            pitch = pitch.signum() * std::f64::consts::FRAC_PI_4;
-        }
-
-        if yaw.abs() > std::f64::consts::FRAC_PI_4 {
-            yaw = yaw.signum() * std::f64::consts::FRAC_PI_4;
-        }
-
-        let q_new = quaternions::Quaternion::from_rpy(roll, pitch, yaw);
 
         let msg: PoseStampedMsg = PoseStampedMsg {
             header: std_msgs::msg::Header {
