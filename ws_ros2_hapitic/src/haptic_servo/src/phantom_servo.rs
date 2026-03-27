@@ -8,6 +8,7 @@ use std::{thread, time::Duration};
 use std::sync::{Arc, Mutex};
 use geometry_msgs::msg::PoseStamped as PoseStampedMsg;
 use omni_msgs::msg::OmniButtonEvent as OmniButtonEventMsg;
+use omni_msgs::msg::OmniFeedback as OmniFeedbackMsg; // todo
 
 struct ServoPublisherNode {
     #[allow(unused)]
@@ -58,15 +59,15 @@ impl ServoPublisherNode {
         };
  
         let q_phantom = quaternions::Quaternion::from(phantom_msg.pose.orientation);
-                
-        println!("g_pahntom: {}",q_phantom);
+        
+        // println!("q_pahntom: {}",q_phantom);
 
         let q_phantom = q_inkwell.delta(&q_phantom);
-        
+
         // limit the rotation to 45 degrees in each axis to avoid singularities in the robot
         let (mut roll, mut pitch, mut yaw) = q_phantom.to_rpy();
 
-        log_info!(self.node.logger(), "Got roll: {} pitch: {} yaw: {}", roll, pitch, yaw);
+        log_debug!(self.node.logger(), "Got roll: {} pitch: {} yaw: {}", roll, pitch, yaw);
 
         if roll.abs() > std::f64::consts::FRAC_PI_8 {
             roll = roll.signum() * std::f64::consts::FRAC_PI_8;
@@ -80,9 +81,17 @@ impl ServoPublisherNode {
             yaw = yaw.signum() * std::f64::consts::FRAC_PI_8;
         }
 
-        let q_phantom = quaternions::Quaternion::from_rpy(roll, pitch, yaw);
+        // let q_phantom = quaternions::Quaternion::from_rpy(roll, pitch, yaw);
+        // roll -> x - axis,
+        // pitch -> y - axis 
+        // yaw -> z - axis 
+        let q_phantom = quaternions::Quaternion::from_rpy(roll, -yaw, -pitch);
 
         let q_new = q_phantom.multiply(&q_rob);
+
+        // x_phantom => -x_robot
+        // y_phantom =>  z_robot
+        // z_phantom =>  y_robot
 
         let msg: PoseStampedMsg = PoseStampedMsg {
             header: std_msgs::msg::Header {
@@ -92,13 +101,14 @@ impl ServoPublisherNode {
                 },
                 frame_id: transform.parent_frame.clone(),
             },
-            
+
             pose: geometry_msgs::msg::Pose {
                 position: geometry_msgs::msg::Point {
-                    x: transform.translation[0]  + (phantom_msg.pose.position.x) as f64,
+                    x: transform.translation[0]  - (phantom_msg.pose.position.x) as f64,
                     y: transform.translation[1]  + (phantom_msg.pose.position.z) as f64,
                     z: transform.translation[2]  + (phantom_msg.pose.position.y) as f64,
                 },
+                // orientation: q_rob.to_ros_msg(), // without rotations 
                 orientation: q_new.to_ros_msg(),
                 /* 
                 orientation: geometry_msgs::msg::Quaternion {
@@ -170,7 +180,8 @@ fn main() -> Result<(), RclrsError> {
     let action_gripper = serv_pub
         .node
         .clone()
-        .create_action_client::<control_msgs::action::FollowJointTrajectory>("/gripper_controller/follow_joint_trajectory")?;
+        .create_action_client::<control_msgs::action::GripperCommand>("/panda_hand_controller/gripper_cmd")?;
+        // .create_action_client::<control_msgs::action::FollowJointTrajectory>("/gripper_controller/follow_joint_trajectory")?; // todo
 
     let ref_frame_str = ref_frame.get().clone().unwrap().as_ref().to_string();
     let eef_frame_str = eef_frame.get().clone().unwrap().as_ref().to_string();
@@ -234,18 +245,24 @@ fn main() -> Result<(), RclrsError> {
                 log_debug!(&n_name, "Received button event: grey button {} white button {}", msg.grey_button, msg.white_button);
                 if msg.white_button == 1 && msg.grey_button == 0 {
                     log_info!(&n_name, "Sending close gripper command");
-                    let goal = control_msgs::action::FollowJointTrajectory_Goal {
-                        trajectory: trajectory_msgs::msg::JointTrajectory {
-                            joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(), 
-                            points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
-                                positions: gripper_close_vals.get().unwrap().to_vec(),
-                                time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
-                                ..Default::default()
-                            }],
-                            ..Default::default()
-                        },
-                        ..Default::default()
+                    let goal = control_msgs::action::GripperCommand_Goal {
+                        command: control_msgs::msg::GripperCommand {
+                            position: 1.0, // TODO
+                            max_effort: 0.0,
+                        }
                     };
+                    // let goal = control_msgs::action::FollowJointTrajectory_Goal {
+                    //     trajectory: trajectory_msgs::msg::JointTrajectory {
+                    //         joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(), 
+                    //         points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
+                    //             positions: gripper_close_vals.get().unwrap().to_vec(),
+                    //             time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                    //             ..Default::default()
+                    //         }],
+                    //         ..Default::default()
+                    //     },
+                    //     ..Default::default()
+                    // };
                     if let Ok(_reqeust) = action_gripper.try_request_goal(goal) {
                         log_info!(&n_name, "Gripper close command sent successfully");
                     } else {
@@ -254,18 +271,24 @@ fn main() -> Result<(), RclrsError> {
                 }
                 else if msg.white_button == 0 && msg.grey_button == 1 {
                     log_info!(&n_name, "Sending open gripper command");
-                    let goal = control_msgs::action::FollowJointTrajectory_Goal {
-                        trajectory: trajectory_msgs::msg::JointTrajectory {
-                            joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(),
-                            points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
-                                positions: gripper_open_vals.get().unwrap().to_vec(), 
-                                time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
-                                ..Default::default()
-                            }],
-                            ..Default::default()
-                        },
-                        ..Default::default()
+                    let goal = control_msgs::action::GripperCommand_Goal {
+                        command: control_msgs::msg::GripperCommand {
+                            position: 0.0,
+                            max_effort: 0.0,
+                        }
                     };
+                    // let goal = control_msgs::action::FollowJointTrajectory_Goal {
+                    //     trajectory: trajectory_msgs::msg::JointTrajectory {
+                    //         joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(),
+                    //         points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
+                    //             positions: gripper_open_vals.get().unwrap().to_vec(), 
+                    //             time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                    //             ..Default::default()
+                    //         }],
+                    //         ..Default::default()
+                    //     },
+                    //     ..Default::default()
+                    // };
                     if let Ok(_reqeust) = action_gripper.try_request_goal(goal) {
                         log_info!(&n_name, "Gripper open command sent successfully");
                     } else {
