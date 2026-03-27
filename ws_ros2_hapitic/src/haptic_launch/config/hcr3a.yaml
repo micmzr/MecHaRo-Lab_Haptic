@@ -1,5 +1,6 @@
 ref_frame: base_link
 eef_frame: tool0
-grippr_joints: [finger1]
+grippr_joints: ['finger1']
 gripper_open: [0.0]
 gripper_close: [0.025]
+gripper_cmd: [false]

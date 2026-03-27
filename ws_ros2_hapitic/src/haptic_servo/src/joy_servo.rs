@@ -103,6 +103,11 @@ fn main() -> Result<(), RclrsError> {
                             .default("tool0".into())
                             .optional()?;
 
+    let gripper_cmd: OptionalParameter<Arc<[bool]>> = serv_pub.node.clone()
+                            .declare_parameter( "gripper_cmd")
+                            .default( Arc::from( vec![false]) )
+                            .optional()?;
+    #[allow(unused)]
     let gripper_joints: OptionalParameter<Arc<[Arc<str>]>> = serv_pub.node.clone()
                             .declare_parameter("grippr_joints")
                             .default( Arc::from(vec![Arc::from("finger1")]) )
@@ -118,13 +123,15 @@ fn main() -> Result<(), RclrsError> {
                             .default( Arc::from(vec![0.025]) )
                             .optional()?;
 
+    let gripper_cmd = gripper_cmd.get().unwrap()[0];
+
     log!(
         serv_pub.node.logger().once(),
-        "Joy servo integrating node started with reference frame: {} eef frame: {}",
+        "Joy servo integrating node started with reference frame: {} eef frame: {} gripper_cmd type {}",
         ref_frame.get().unwrap().as_ref(),
-        eef_frame.get().unwrap().as_ref()
+        eef_frame.get().unwrap().as_ref(),
+        gripper_cmd
     );
-
     
     let node_name = serv_pub.node.name().to_string();
     let node_binding = node_name.clone();
@@ -137,11 +144,16 @@ fn main() -> Result<(), RclrsError> {
         .clone()
         .create_client::<moveit_msgs::srv::ServoCommandType>("/servo_node/switch_command_type")?;
 
-    let action_gripper = serv_pub
+    let action_gripper_cmd = serv_pub
         .node
         .clone()
-        .create_action_client::<control_msgs::action::FollowJointTrajectory>("/gripper_controller/follow_joint_trajectory")?;
+        .create_action_client::<control_msgs::action::GripperCommand>("/panda_hand_controller/gripper_cmd")?;
 
+    let action_gripper_fjt = serv_pub
+        .node
+        .clone()
+        .create_action_client::<control_msgs::action::FollowJointTrajectory>("/gripper_controller/follow_joint_trajectory")?; // todo
+    
     let ref_frame_str = ref_frame.get().clone().unwrap().as_ref().to_string();
     let eef_frame_str = eef_frame.get().clone().unwrap().as_ref().to_string();
 
@@ -209,42 +221,72 @@ fn main() -> Result<(), RclrsError> {
 
                 if button_0 == 1 && button_1 == 0 {
                     log_info!(&n_name, "Sending close gripper command");
-                    let goal = control_msgs::action::FollowJointTrajectory_Goal {
-                        trajectory: trajectory_msgs::msg::JointTrajectory {
-                            joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(), 
-                            points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
-                                positions: gripper_close_vals.get().unwrap().to_vec(),
-                                time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                    if gripper_cmd {
+                        let goal = control_msgs::action::GripperCommand_Goal {
+                            command: control_msgs::msg::GripperCommand {
+                                position: gripper_close_vals.get().unwrap()[0], 
+                                max_effort: 0.0,
+                            }
+                        };
+                        if let Ok(_reqeust) = action_gripper_cmd.try_request_goal(goal) {
+                            log_info!(&n_name, "Gripper close command sent successfully");
+                        } else {
+                            log_warn!(&n_name, "Failed to send gripper open command");
+                        }
+                    }
+                    else {
+                        let goal = control_msgs::action::FollowJointTrajectory_Goal {
+                            trajectory: trajectory_msgs::msg::JointTrajectory {
+                                joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(), 
+                                points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
+                                    positions: gripper_close_vals.get().unwrap().to_vec(),
+                                    time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                                    ..Default::default()
+                                }],
                                 ..Default::default()
-                            }],
+                            },
                             ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-                    if let Ok(_reqeust) = action_gripper.try_request_goal(goal) {
-                        log_info!(&n_name, "Gripper close command sent successfully");
-                    } else {
-                        log_warn!(&n_name, "Failed to send gripper close command");
+                        };
+                        if let Ok(_reqeust) = action_gripper_fjt.try_request_goal(goal) {
+                            log_info!(&n_name, "Gripper close command sent successfully");
+                        } else {
+                            log_warn!(&n_name, "Failed to send gripper close command");
+                        }
                     }
                 }
                 else if button_0 == 0 && button_1 == 1 {
                     log_info!(&n_name, "Sending open gripper command");
-                    let goal = control_msgs::action::FollowJointTrajectory_Goal {
-                        trajectory: trajectory_msgs::msg::JointTrajectory {
-                            joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(),
-                            points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
-                                positions: gripper_open_vals.get().unwrap().to_vec(), 
-                                time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                    if gripper_cmd {
+                        let goal = control_msgs::action::GripperCommand_Goal {
+                            command: control_msgs::msg::GripperCommand {
+                                position: gripper_open_vals.get().unwrap()[0],
+                                max_effort: 0.0,
+                            }
+                        };
+                        if let Ok(_reqeust) = action_gripper_cmd.try_request_goal(goal) {
+                            log_info!(&n_name, "Gripper open command sent successfully");
+                        } else {
+                            log_warn!(&n_name, "Failed to send gripper open command");
+                        }
+                    }
+                    else {
+                        let goal = control_msgs::action::FollowJointTrajectory_Goal {
+                            trajectory: trajectory_msgs::msg::JointTrajectory {
+                                joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(),
+                                points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
+                                    positions: gripper_open_vals.get().unwrap().to_vec(), 
+                                    time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                                    ..Default::default()
+                                }],
                                 ..Default::default()
-                            }],
+                            },
                             ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-                    if let Ok(_reqeust) = action_gripper.try_request_goal(goal) {
-                        log_info!(&n_name, "Gripper open command sent successfully");
-                    } else {
-                        log_warn!(&n_name, "Failed to send gripper open command");
+                        };
+                        if let Ok(_reqeust) = action_gripper_fjt.try_request_goal(goal) {
+                            log_info!(&n_name, "Gripper open command sent successfully");
+                        } else {
+                            log_warn!(&n_name, "Failed to send gripper open command");
+                        }
                     }
                 }
             },
