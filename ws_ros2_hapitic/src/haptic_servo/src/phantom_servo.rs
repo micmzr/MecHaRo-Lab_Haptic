@@ -125,12 +125,27 @@ fn main() -> Result<(), RclrsError> {
 
     let ref_frame: OptionalParameter<Arc<str>> = serv_pub.node.clone()
                             .declare_parameter( "ref_frame")
-                            .default("panda_link0".into())
+                            .default("base_link".into())
                             .optional()?;
 
     let eef_frame: OptionalParameter<Arc<str>> = serv_pub.node.clone()
                             .declare_parameter( "eef_frame")
-                            .default("panda_link8".into())
+                            .default("tool0".into())
+                            .optional()?;
+
+    let gripper_joints: OptionalParameter<Arc<[Arc<str>]>> = serv_pub.node.clone()
+                            .declare_parameter("grippr_joints")
+                            .default( Arc::from(vec![Arc::from("finger1")]) )
+                            .optional()?;
+
+    let gripper_open_vals: OptionalParameter<Arc<[f64]>> = serv_pub.node.clone()
+                            .declare_parameter("gripper_open")
+                            .default( Arc::from(vec![0.0]) )
+                            .optional()?;
+
+    let gripper_close_vals: OptionalParameter<Arc<[f64]>> = serv_pub.node.clone()
+                            .declare_parameter("gripper_close")
+                            .default( Arc::from(vec![0.025]) )
                             .optional()?;
 
     log!(
@@ -221,9 +236,9 @@ fn main() -> Result<(), RclrsError> {
                     log_info!(&n_name, "Sending close gripper command");
                     let goal = control_msgs::action::FollowJointTrajectory_Goal {
                         trajectory: trajectory_msgs::msg::JointTrajectory {
-                            joint_names: vec!["finger1".to_string()],
+                            joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(), 
                             points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
-                                positions: vec![0.025],
+                                positions: gripper_close_vals.get().unwrap().to_vec(),
                                 time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
                                 ..Default::default()
                             }],
@@ -241,9 +256,9 @@ fn main() -> Result<(), RclrsError> {
                     log_info!(&n_name, "Sending open gripper command");
                     let goal = control_msgs::action::FollowJointTrajectory_Goal {
                         trajectory: trajectory_msgs::msg::JointTrajectory {
-                            joint_names: vec!["finger1".to_string()],
+                            joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(),
                             points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
-                                positions: vec![0.0],
+                                positions: gripper_open_vals.get().unwrap().to_vec(), 
                                 time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
                                 ..Default::default()
                             }],

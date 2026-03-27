@@ -30,7 +30,8 @@ impl ServoPublisherNode {
         if let Some(transform) = &self.tf {
             log_debug!(self.node.logger(), "Got transform : {} to {}", transform.parent_frame.as_str(), transform.child_frame.as_str());
         } else {
-            log_error!(self.node.logger(), "No transform available, cannot publish servo command");
+            log_warn!(self.node.logger(), "No transform available, cannot publish servo command");
+            thread::sleep(Duration::from_millis(1000));
             return Err(RclrsError::UnknownRclError { code: -1, msg: None });
         }
 
@@ -94,12 +95,27 @@ fn main() -> Result<(), RclrsError> {
 
     let ref_frame: OptionalParameter<Arc<str>> = serv_pub.node.clone()
                             .declare_parameter( "ref_frame")
-                            .default("panda_link0".into())
+                            .default("base_link".into())
                             .optional()?;
 
     let eef_frame: OptionalParameter<Arc<str>> = serv_pub.node.clone()
                             .declare_parameter( "eef_frame")
-                            .default("panda_link8".into())
+                            .default("tool0".into())
+                            .optional()?;
+
+    let gripper_joints: OptionalParameter<Arc<[Arc<str>]>> = serv_pub.node.clone()
+                            .declare_parameter("grippr_joints")
+                            .default( Arc::from(vec![Arc::from("finger1")]) )
+                            .optional()?;
+
+    let gripper_open_vals: OptionalParameter<Arc<[f64]>> = serv_pub.node.clone()
+                            .declare_parameter("gripper_open")
+                            .default( Arc::from(vec![0.0]) )
+                            .optional()?;
+
+    let gripper_close_vals: OptionalParameter<Arc<[f64]>> = serv_pub.node.clone()
+                            .declare_parameter("gripper_close")
+                            .default( Arc::from(vec![0.025]) )
                             .optional()?;
 
     log!(
@@ -121,6 +137,10 @@ fn main() -> Result<(), RclrsError> {
         .clone()
         .create_client::<moveit_msgs::srv::ServoCommandType>("/servo_node/switch_command_type")?;
 
+    let action_gripper = serv_pub
+        .node
+        .clone()
+        .create_action_client::<control_msgs::action::FollowJointTrajectory>("/gripper_controller/follow_joint_trajectory")?;
 
     let ref_frame_str = ref_frame.get().clone().unwrap().as_ref().to_string();
     let eef_frame_str = eef_frame.get().clone().unwrap().as_ref().to_string();
@@ -166,12 +186,67 @@ fn main() -> Result<(), RclrsError> {
     let msg_ = Arc::new(Mutex::new(None::<sensor_msgs::msg::Joy>));
 
     let msg_sub = Arc::clone(&msg_);
+    
+    let n_name = node_name.as_str().to_string();
 
     let _sub = serv_pub_ptr_clone.try_lock().unwrap().node.clone()
         .create_subscription(
             "/joy",
             move |msg: sensor_msgs::msg::Joy| {
-                *msg_sub.lock().unwrap() = Some(msg);
+                *msg_sub.lock().unwrap() = Some(msg.clone());
+                
+                let button_0 = match msg.buttons.get(0) {
+                    Some(n) => *n,
+                    _ => -1
+                };
+
+                let button_1 = match msg.buttons.get(1) {
+                    Some(n) => *n,
+                    _ => -1
+                };
+
+                log_debug!(&n_name, "Processing button event: button_1 {} button_2 {}", button_0, button_1);
+
+                if button_0 == 1 && button_1 == 0 {
+                    log_info!(&n_name, "Sending close gripper command");
+                    let goal = control_msgs::action::FollowJointTrajectory_Goal {
+                        trajectory: trajectory_msgs::msg::JointTrajectory {
+                            joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(), 
+                            points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
+                                positions: gripper_close_vals.get().unwrap().to_vec(),
+                                time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                                ..Default::default()
+                            }],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    if let Ok(_reqeust) = action_gripper.try_request_goal(goal) {
+                        log_info!(&n_name, "Gripper close command sent successfully");
+                    } else {
+                        log_warn!(&n_name, "Failed to send gripper close command");
+                    }
+                }
+                else if button_0 == 0 && button_1 == 1 {
+                    log_info!(&n_name, "Sending open gripper command");
+                    let goal = control_msgs::action::FollowJointTrajectory_Goal {
+                        trajectory: trajectory_msgs::msg::JointTrajectory {
+                            joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(),
+                            points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
+                                positions: gripper_open_vals.get().unwrap().to_vec(), 
+                                time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                                ..Default::default()
+                            }],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    if let Ok(_reqeust) = action_gripper.try_request_goal(goal) {
+                        log_info!(&n_name, "Gripper open command sent successfully");
+                    } else {
+                        log_warn!(&n_name, "Failed to send gripper open command");
+                    }
+                }
             },
         ).unwrap();
 
@@ -183,7 +258,7 @@ fn main() -> Result<(), RclrsError> {
             if let Ok(()) = serv_pub_ptr_clone.try_lock().unwrap().publish_data(msg) {
                 // Do nothing
             } else {
-                log_error!(node_name.as_str(), "Error in publishing servo command");
+                log_debug!(node_name.as_str(), "Error in publishing servo command");
                 // break;
             }
         }       
