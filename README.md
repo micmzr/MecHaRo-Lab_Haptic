@@ -16,7 +16,7 @@ python3 -m venv ./vev_cargo
 source ./vev_cargo/bin/activate
 pip install colcon-cargo colcon-ros-cargo
 pip install numpy lark # workaround for venv
-cd MecHaRo-Lab_Haptic/ws_ros2_hapitic
+cd MecHaRo-Lab_Haptic/ws_ros2_haptic
 colcon build
 source install/setup.sh
 ```
@@ -30,7 +30,7 @@ python3 -m venv ./vev_cargo
 source ./vev_cargo/bin/activate
 pip install colcon-cargo colcon-ros-cargo
 pip install numpy lark # workaround for venv
-cd MecHaRo-Lab_Haptic/ws_ros2_hapitic/ros-rust
+cd MecHaRo-Lab_Haptic/ws_ros2_haptic/ros-rust
 colcon build
 source install/setup.sh
 cd ../src/
