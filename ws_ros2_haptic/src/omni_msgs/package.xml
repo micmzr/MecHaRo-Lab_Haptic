@@ -3,7 +3,7 @@
 <package format="3">
   <name>omni_msgs</name>
   <description>The omni_msgs package</description>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
   <maintainer email="mazur.m.r@gmail.com">Michal Mazur</maintainer>
   <author>Michal Mazur</author>
   <author>Francisco Suarez-Ruiz</author>

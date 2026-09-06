@@ -6,9 +6,9 @@ use tf2_rs::{
 };
 use std::{thread, time::Duration};
 use std::sync::{Arc, Mutex};
-use geometry_msgs::msg::PoseStamped as PoseStampedMsg;
-use omni_msgs::msg::OmniButtonEvent as OmniButtonEventMsg;
-use omni_msgs::msg::OmniFeedback as OmniFeedbackMsg; // todo
+use ros_env::geometry_msgs::msg::PoseStamped as PoseStampedMsg;
+use ros_env::omni_msgs::msg::OmniButtonEvent as OmniButtonEventMsg;
+use ros_env::omni_msgs::msg::OmniFeedback as OmniFeedbackMsg; // todo
 
 struct ServoPublisherNode {
     #[allow(unused)]
@@ -94,16 +94,16 @@ impl ServoPublisherNode {
         // z_phantom =>  y_robot
 
         let msg: PoseStampedMsg = PoseStampedMsg {
-            header: std_msgs::msg::Header {
-                stamp: builtin_interfaces::msg::Time {
+            header: ros_env::std_msgs::msg::Header {
+                stamp: ros_env::builtin_interfaces::msg::Time {
                     sec: stamp_.sec,
                     nanosec: stamp_.nanosec,
                 },
                 frame_id: transform.parent_frame.clone(),
             },
 
-            pose: geometry_msgs::msg::Pose {
-                position: geometry_msgs::msg::Point {
+            pose: ros_env::geometry_msgs::msg::Pose {
+                position: ros_env::geometry_msgs::msg::Point {
                     x: transform.translation[0]  - (phantom_msg.pose.position.x) as f64,
                     y: transform.translation[1]  + (phantom_msg.pose.position.z) as f64,
                     z: transform.translation[2]  + (phantom_msg.pose.position.y) as f64,
@@ -170,17 +170,17 @@ fn main() -> Result<(), RclrsError> {
     let command_type = serv_pub
         .node
         .clone()
-        .create_client::<moveit_msgs::srv::ServoCommandType>("/servo_node/switch_command_type")?;
+        .create_client::<ros_env::moveit_msgs::srv::ServoCommandType>("/servo_node/switch_command_type")?;
 
     let action_gripper_cmd = serv_pub
         .node
         .clone()
-        .create_action_client::<control_msgs::action::GripperCommand>("/panda_hand_controller/gripper_cmd")?;
+        .create_action_client::<ros_env::control_msgs::action::GripperCommand>("/panda_hand_controller/gripper_cmd")?;
 
     let action_gripper_fjt = serv_pub
         .node
         .clone()
-        .create_action_client::<control_msgs::action::FollowJointTrajectory>("/gripper_controller/follow_joint_trajectory")?; // todo
+        .create_action_client::<ros_env::control_msgs::action::FollowJointTrajectory>("/gripper_controller/follow_joint_trajectory")?; // todo
     
     let ref_frame_str = ref_frame.get().clone().unwrap().as_ref().to_string();
     let eef_frame_str = eef_frame.get().clone().unwrap().as_ref().to_string();
@@ -195,13 +195,13 @@ fn main() -> Result<(), RclrsError> {
         );
         command_type.notify_on_service_ready().await.unwrap();
 
-        let request = moveit_msgs::srv::ServoCommandType_Request {
-            command_type: moveit_msgs::srv::ServoCommandType_Request::POSE,
+        let request = ros_env::moveit_msgs::srv::ServoCommandType_Request {
+            command_type: ros_env::moveit_msgs::srv::ServoCommandType_Request::POSE,
         };
-        // let request = moveit_msgs::srv::ServoCommandType_Request::TWIST;
+        // let request = ros_env::moveit_msgs::srv::ServoCommandType_Request::TWIST;
 
         log_info!(node_binding.as_str(), "Waiting for response");
-        let response: moveit_msgs::srv::ServoCommandType_Response =
+        let response: ros_env::moveit_msgs::srv::ServoCommandType_Response =
             command_type.call(&request).unwrap().await.unwrap();
 
         let tf = match buffer.lookup_transform(ref_frame_str.as_str(), eef_frame_str.as_str(), LookupTime::Latest){
@@ -245,8 +245,8 @@ fn main() -> Result<(), RclrsError> {
                 if msg.white_button == 1 && msg.grey_button == 0 {
                     log_info!(&n_name, "Sending close gripper command");
                     if gripper_cmd {
-                        let goal = control_msgs::action::GripperCommand_Goal {
-                            command: control_msgs::msg::GripperCommand {
+                        let goal = ros_env::control_msgs::action::GripperCommand_Goal {
+                            command: ros_env::control_msgs::msg::GripperCommand {
                                 position: gripper_close_vals.get().unwrap()[0], 
                                 max_effort: 0.0,
                             }
@@ -258,12 +258,12 @@ fn main() -> Result<(), RclrsError> {
                         }
                     }
                     else {
-                        let goal = control_msgs::action::FollowJointTrajectory_Goal {
-                            trajectory: trajectory_msgs::msg::JointTrajectory {
+                        let goal = ros_env::control_msgs::action::FollowJointTrajectory_Goal {
+                            trajectory: ros_env::trajectory_msgs::msg::JointTrajectory {
                                 joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(), 
-                                points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
+                                points: vec![ros_env::trajectory_msgs::msg::JointTrajectoryPoint {
                                     positions: gripper_close_vals.get().unwrap().to_vec(),
-                                    time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                                    time_from_start: ros_env::builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
                                     ..Default::default()
                                 }],
                                 ..Default::default()
@@ -280,8 +280,8 @@ fn main() -> Result<(), RclrsError> {
                 else if msg.white_button == 0 && msg.grey_button == 1 {
                     log_info!(&n_name, "Sending open gripper command");
                     if gripper_cmd {
-                        let goal = control_msgs::action::GripperCommand_Goal {
-                            command: control_msgs::msg::GripperCommand {
+                        let goal = ros_env::control_msgs::action::GripperCommand_Goal {
+                            command: ros_env::control_msgs::msg::GripperCommand {
                                 position: gripper_open_vals.get().unwrap()[0],
                                 max_effort: 0.0,
                             }
@@ -293,12 +293,12 @@ fn main() -> Result<(), RclrsError> {
                         }
                     }
                     else {
-                        let goal = control_msgs::action::FollowJointTrajectory_Goal {
-                            trajectory: trajectory_msgs::msg::JointTrajectory {
+                        let goal = ros_env::control_msgs::action::FollowJointTrajectory_Goal {
+                            trajectory: ros_env::trajectory_msgs::msg::JointTrajectory {
                                 joint_names: gripper_joints.get().unwrap().iter().map(|s| s.to_string()).collect(),
-                                points: vec![trajectory_msgs::msg::JointTrajectoryPoint {
+                                points: vec![ros_env::trajectory_msgs::msg::JointTrajectoryPoint {
                                     positions: gripper_open_vals.get().unwrap().to_vec(), 
-                                    time_from_start: builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
+                                    time_from_start: ros_env::builtin_interfaces::msg::Duration { sec: 1, nanosec: 0 },
                                     ..Default::default()
                                 }],
                                 ..Default::default()

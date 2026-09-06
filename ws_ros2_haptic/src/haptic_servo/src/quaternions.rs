@@ -8,8 +8,8 @@ pub struct Quaternion {
     pub w: f64,
 }
 
-impl From<geometry_msgs::msg::Quaternion> for Quaternion {
-    fn from(q: geometry_msgs::msg::Quaternion) -> Self {
+impl From<ros_env::geometry_msgs::msg::Quaternion> for Quaternion {
+    fn from(q: ros_env::geometry_msgs::msg::Quaternion) -> Self {
         Self {
             x: q.x,
             y: q.y,
@@ -28,8 +28,8 @@ impl fmt::Display for Quaternion {
 
 
 impl Quaternion {
-    pub fn to_ros_msg(&self) -> geometry_msgs::msg::Quaternion {
-        geometry_msgs::msg::Quaternion {
+    pub fn to_ros_msg(&self) -> ros_env::geometry_msgs::msg::Quaternion {
+        ros_env::geometry_msgs::msg::Quaternion {
             x: self.x,
             y: self.y,
             z: self.z,

@@ -5,16 +5,9 @@ edition = "2024"
 
 [dependencies]
 rclrs = "0.7"
-builtin_interfaces = "*"
-moveit_msgs = "*"
-control_msgs = "*"
-omni_msgs = "*"
-geometry_msgs = "*"
-trajectory_msgs = "*"
-std_msgs = "*"
-sensor_msgs = "*"
+ros-env = "0.2"
+rosidl_runtime_rs = "0.6"
 tf2_rs = {path = "../../ros-rust/src/tf2_rs"}
-tf2_msgs = "*"
 
 [[bin]]
 name = "joy_servo"
