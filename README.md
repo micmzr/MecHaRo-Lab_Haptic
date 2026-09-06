@@ -10,34 +10,11 @@ Everything presented here is mean to be run on the PC.
 _Install_
 
 ``` bash
-sudo apt install -y ros-$ROS_DISTRO-example-interfaces ros-$ROS_DISTRO-test-msgs ros-$ROS_DISTRO-test-interface-files ros-$ROS_DISTRO-ament-cmake-google-benchmark
-git clone --recursive -b jazzy https://github.com/micmzr/MecHaRo-Lab_Haptic.git
-python3 -m venv ./vev_cargo
-source ./vev_cargo/bin/activate
-pip install colcon-cargo colcon-ros-cargo
-pip install numpy lark # workaround for venv
+git clone --recursive -b lyrical https://github.com/micmzr/MecHaRo-Lab_Haptic.git
 cd MecHaRo-Lab_Haptic/ws_ros2_haptic
 colcon build
 source install/setup.sh
 ```
-
-For development it is better to use separate workspaces: 
-
-``` bash
-sudo apt install -y ros-$ROS_DISTRO-example-interfaces ros-$ROS_DISTRO-test-msgs ros-$ROS_DISTRO-test-interface-files ros-$ROS_DISTRO-ament-cmake-google-benchmark
-git clone --recursive -b jazzy git@github.com:micmzr/MecHaRo-Lab_Haptic.git
-python3 -m venv ./vev_cargo
-source ./vev_cargo/bin/activate
-pip install colcon-cargo colcon-ros-cargo
-pip install numpy lark # workaround for venv
-cd MecHaRo-Lab_Haptic/ws_ros2_haptic/ros-rust
-colcon build
-source install/setup.sh
-cd ../src/
-colcon build
-source install/setup.sh
-```
-
 
 **_Run - example_**
 
