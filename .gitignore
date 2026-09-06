@@ -1,9 +1,8 @@
-ws_ros2_hapitic/.vscode/
-ws_ros2_hapitic/build/
-ws_ros2_hapitic/install/  
-ws_ros2_hapitic/log/
+ws_ros2_haptic/.vscode/
+ws_ros2_haptic/build/
+ws_ros2_haptic/install/  
+ws_ros2_haptic/log/
 ws_ros2_haptic/.cargo/
-ws_ros2_hapitic/src/haptic_servo/Cargo.lock
+ws_ros2_haptic/src/haptic_servo/Cargo.lock
 ws_ros2_haptic/ros-rust/src/tf2_rs/Cargo.lock
-ws_ros2_hapitic/.vscode/
 ws_ros2_haptic/src/haptic_servo/target/
