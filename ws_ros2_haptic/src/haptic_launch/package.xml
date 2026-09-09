@@ -11,6 +11,8 @@
 
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>haptic_servo</exec_depend>
+  <exec_depend>moveit_resources_panda_moveit_config</exec_depend>
+  <exec_depend>moveit_resources_panda_description</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
