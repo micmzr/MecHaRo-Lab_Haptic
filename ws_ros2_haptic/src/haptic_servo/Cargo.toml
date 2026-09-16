@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rclrs = "0.7"
+rclrs = { git = "https://github.com/micmzr/ros2_rust.git" }
 ros-env = "0.2"
-rosidl_runtime_rs = "0.6"
+rosidl_runtime_rs = "0.7"
 tf2_rs = {path = "../../ros-rust/src/tf2_rs"}
 
 [[bin]]
