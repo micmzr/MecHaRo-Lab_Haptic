@@ -1,5 +1,5 @@
 ref_frame: panda_link0
-eef_frame: panda_hand
+eef_frame: panda_link8
 grippr_joints: ['panda_finger_joint1']
 gripper_open: [0.035]
 gripper_close: [0.0]

@@ -11,6 +11,7 @@ struct ServoPublisherNode {
     publisher: Publisher<PoseStampedMsg>,
     node: Node,
     tf: Option<TransformStamped>,
+    ready: bool,
 }
 
 impl ServoPublisherNode {
@@ -19,7 +20,7 @@ impl ServoPublisherNode {
         let publisher = node
             .create_publisher("/servo_node/pose_target_cmds")
             .unwrap();
-        Ok(Self { publisher, node, tf: None})
+        Ok(Self { publisher, node, tf: None, ready: false})
     }
 
     fn set_transform(&mut self, tf: TransformStamped) {
@@ -136,7 +137,7 @@ fn main() -> Result<(), RclrsError> {
     let node_name = serv_pub.node.name().to_string();
     let node_binding = node_name.clone();
 
-    let buffer = BufferCore::new(Duration::from_secs(60));
+    let buffer = BufferCore::new(Duration::from_secs(10));
     let _listener = TransformListener::new(&serv_pub.node, buffer.clone())?;
 
     let command_type = serv_pub
@@ -159,6 +160,8 @@ fn main() -> Result<(), RclrsError> {
 
     let serv_pub_ptr = Arc::new(Mutex::new(serv_pub));
     let serv_pub_ptr_clone = Arc::clone(&serv_pub_ptr);
+
+    let _ = executor.spin(SpinOptions::timeout(SpinOptions::new(), Duration::from_millis(5000))).first_error(); // need to collect some data by tf listener 
 
     let _promise = executor.commands().run(async move {
         log_info!(
@@ -189,11 +192,16 @@ fn main() -> Result<(), RclrsError> {
 
         if response.success {
             log_info!(node_binding.as_str(), "Switched to input type: Pose",);
+            serv_pub_ptr.lock().unwrap().ready = true;
         } else {
             log!(node_binding.as_str(), "Could not switch input to: Pose",);
         }
-    
     });
+
+    if serv_pub_ptr_clone.lock().unwrap().ready {
+        let _ = executor.spin(SpinOptions::timeout(SpinOptions::new(), Duration::from_millis(1000))).first_error();
+        return Ok(())
+    }
     
     let msg_ = Arc::new(Mutex::new(None::<ros_env::sensor_msgs::msg::Joy>));
 

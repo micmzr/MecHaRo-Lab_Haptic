@@ -1,24 +1,83 @@
 import os
-import launch
-import launch_ros
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.conditions import IfCondition
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
-from launch.conditions import IfCondition, UnlessCondition
-from launch.substitutions import LaunchConfiguration
-from launch_param_builder import ParameterBuilder
 from moveit_configs_utils import MoveItConfigsBuilder
+from launch_param_builder import ParameterBuilder
+
+
+def distro_specific_path(package_share: str, base_relpath: str) -> str:
+    """Return a distro-overridable share-relative path.
+
+    ``<package_share>/<base_relpath>`` is the default form. A file at
+    ``<package_share>/<stem>.<ROS_DISTRO><ext>`` overrides it when the
+    ``ROS_DISTRO`` env var is set and the override file exists.
+
+    See .github/DISTRO_COMPAT_POLICY.md §1.3 for the broader policy.
+    Long-term this helper should live in ``moveit_configs_utils`` so
+    every launch using ``MoveItConfigsBuilder`` gets the behavior for
+    free.
+    """
+    distro = os.environ.get("ROS_DISTRO", "")
+    if distro:
+        stem, ext = os.path.splitext(base_relpath)
+        override = os.path.join(package_share, f"{stem}.{distro}{ext}")
+        if os.path.isfile(override):
+            return override
+    return os.path.join(package_share, base_relpath)
 
 
 def generate_launch_description():
+
+    # Command-line arguments
+    rviz_config_arg = DeclareLaunchArgument(
+        "rviz_config",
+        default_value="moveit.rviz",
+        description="RViz configuration file",
+    )
+
+    db_arg = DeclareLaunchArgument(
+        "db", default_value="False", description="Database flag"
+    )
+
+    ros2_control_hardware_type = DeclareLaunchArgument(
+        "ros2_control_hardware_type",
+        default_value="mock_components",
+        description="ROS 2 control hardware interface type to use for the launch file -- possible values: [mock_components, isaac]",
+    )
+
     moveit_config = (
         MoveItConfigsBuilder("moveit_resources_panda")
-        .robot_description(file_path="config/panda.urdf.xacro")
-        .joint_limits(file_path="config/hard_joint_limits.yaml")
+        .robot_description(
+            file_path="config/panda.urdf.xacro",
+            mappings={
+                "ros2_control_hardware_type": LaunchConfiguration(
+                    "ros2_control_hardware_type"
+                )
+            },
+        )
+        .robot_description_semantic(file_path="config/panda.srdf")
+        .planning_scene_monitor(
+            publish_robot_description=True, publish_robot_description_semantic=True
+        )
+        .trajectory_execution(file_path="config/gripper_moveit_controllers.yaml")
+        .planning_pipelines(
+            pipelines=["ompl", "chomp", "pilz_industrial_motion_planner", "stomp"]
+        )
         .to_moveit_configs()
     )
 
-    # Launch Servo as a standalone node or as a "node component" for better latency/efficiency
-    launch_as_standalone_node = LaunchConfiguration(
-        "launch_as_standalone_node", default="false"
+    # Start the actual move_group node/action server
+    move_group_node = Node(
+        package="moveit_ros_move_group",
+        executable="move_group",
+        output="screen",
+        parameters=[moveit_config.to_dict()],
+        arguments=["--ros-args", "--log-level", "info"],
     )
 
     # Get parameters for the Servo node
@@ -33,29 +92,54 @@ def generate_launch_description():
     planning_group_name = {"planning_group_name": "panda_arm"}
 
     # RViz
-    rviz_config_file = (
-        get_package_share_directory("moveit_servo")
-        + "/config/demo_rviz_config_ros.rviz"
+    rviz_base = LaunchConfiguration("rviz_config")
+    rviz_config = PathJoinSubstitution(
+        [FindPackageShare("moveit_resources_panda_moveit_config"), "launch", rviz_base]
     )
-    rviz_node = launch_ros.actions.Node(
+    rviz_node = Node(
         package="rviz2",
         executable="rviz2",
         name="rviz2",
         output="log",
-        arguments=["-d", rviz_config_file],
+        arguments=["-d", rviz_config],
         parameters=[
             moveit_config.robot_description,
             moveit_config.robot_description_semantic,
+            moveit_config.planning_pipelines,
+            moveit_config.robot_description_kinematics,
+            moveit_config.joint_limits,
         ],
     )
 
-    # ros2_control using FakeSystem as hardware
-    ros2_controllers_path = os.path.join(
-        get_package_share_directory("moveit_resources_panda_moveit_config"),
-        "config",
-        "ros2_controllers.yaml",
+    # Static TF
+    static_tf_node = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="static_transform_publisher",
+        output="log",
+        arguments=["--frame-id", "world", "--child-frame-id", "panda_link0"],
     )
-    ros2_control_node = launch_ros.actions.Node(
+
+    # Publish TF
+    robot_state_publisher = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        name="robot_state_publisher",
+        output="both",
+        parameters=[moveit_config.robot_description],
+    )
+
+    # ros2_control using FakeSystem as hardware.
+    # The controller-class names in ros2_controllers.yaml differ between distros
+    # (Jazzy+ uses parallel_gripper_action_controller, Humble uses
+    # position_controllers). distro_specific_path() picks the Humble override
+    # config/ros2_controllers.humble.yaml when ROS_DISTRO=humble; falls back to
+    # the default file otherwise. See .github/DISTRO_COMPAT_POLICY.md §1.3.
+    ros2_controllers_path = distro_specific_path(
+        get_package_share_directory("moveit_resources_panda_moveit_config"),
+        "config/ros2_controllers.yaml",
+    )
+    ros2_control_node = Node(
         package="controller_manager",
         executable="ros2_control_node",
         parameters=[ros2_controllers_path],
@@ -65,72 +149,58 @@ def generate_launch_description():
         output="screen",
     )
 
-    joint_state_broadcaster_spawner = launch_ros.actions.Node(
+    joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=[
             "joint_state_broadcaster",
-            "--controller-manager-timeout",
-            "300",
             "--controller-manager",
             "/controller_manager",
+            "--param-file",
+            ros2_controllers_path,
         ],
     )
 
-    panda_arm_controller_spawner = launch_ros.actions.Node(
+    panda_arm_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["panda_arm_controller", "-c", "/controller_manager"],
+        arguments=[
+            "panda_arm_controller",
+            "-c",
+            "/controller_manager",
+            "--param-file",
+            ros2_controllers_path,
+        ],
     )
 
-    panda_hand_controller_spawner = launch_ros.actions.Node(
+    panda_hand_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["panda_hand_controller", "-c", "/controller_manager"],
+        arguments=[
+            "panda_hand_controller",
+            "-c",
+            "/controller_manager",
+            "--param-file",
+            ros2_controllers_path,
+        ],
     )
 
-    # Launch as much as possible in components
-    container = launch_ros.actions.ComposableNodeContainer(
-        name="moveit_servo_demo_container",
-        namespace="/",
-        package="rclcpp_components",
-        executable="component_container_mt",
-        composable_node_descriptions=[
-            # Example of launching Servo as a node component
-            # Launching as a node component makes ROS 2 intraprocess communication more efficient.
-            launch_ros.descriptions.ComposableNode(
-                package="moveit_servo",
-                plugin="moveit_servo::ServoNode",
-                name="servo_node",
-                parameters=[
-                    servo_params,
-                    acceleration_filter_update_period,
-                    planning_group_name,
-                    moveit_config.robot_description,
-                    moveit_config.robot_description_semantic,
-                    moveit_config.robot_description_kinematics,
-                    moveit_config.joint_limits,
-                ],
-                condition=UnlessCondition(launch_as_standalone_node),
-            ),
-            launch_ros.descriptions.ComposableNode(
-                package="robot_state_publisher",
-                plugin="robot_state_publisher::RobotStatePublisher",
-                name="robot_state_publisher",
-                parameters=[moveit_config.robot_description],
-            ),
-            launch_ros.descriptions.ComposableNode(
-                package="tf2_ros",
-                plugin="tf2_ros::StaticTransformBroadcasterNode",
-                name="static_tf2_broadcaster",
-                parameters=[{"child_frame_id": "/panda_link0", "frame_id": "/world"}],
-            ),
+    # Warehouse mongodb server
+    db_config = LaunchConfiguration("db")
+    mongodb_server_node = Node(
+        package="warehouse_ros_mongo",
+        executable="mongo_wrapper_ros.py",
+        parameters=[
+            {"warehouse_port": 33829},
+            {"warehouse_host": "localhost"},
+            {"warehouse_plugin": "warehouse_ros_mongo::MongoDatabaseConnection"},
         ],
         output="screen",
+        condition=IfCondition(db_config),
     )
-    # Launch a standalone Servo node.
-    # As opposed to a node component, this may be necessary (for example) if Servo is running on a different PC
-    servo_node = launch_ros.actions.Node(
+
+    # Launch a servo node.
+    servo_node = Node(
         package="moveit_servo",
         executable="servo_node",
         name="servo_node",
@@ -144,17 +214,22 @@ def generate_launch_description():
             moveit_config.joint_limits,
         ],
         output="screen",
-        condition=IfCondition(launch_as_standalone_node),
     )
 
-    return launch.LaunchDescription(
+    return LaunchDescription(
         [
+            rviz_config_arg,
+            db_arg,
+            ros2_control_hardware_type,
             rviz_node,
+            static_tf_node,
+            robot_state_publisher,
+            move_group_node,
             ros2_control_node,
             joint_state_broadcaster_spawner,
             panda_arm_controller_spawner,
             panda_hand_controller_spawner,
+            mongodb_server_node,
             servo_node,
-            container,
         ]
     )

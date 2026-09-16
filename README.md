@@ -21,7 +21,8 @@ source install/setup.sh
 _XBOX Controller_
 ``` bash
 ros2 run joy joy_node
-ros2 run haptic_servo joy_servo --ros-args -p ref_frame:=base_link  --ros-args -p eef_frame:=tool0
+ros2 launch haptic_launch panda.launch.py
+ros2 launch haptic_launch haptic_servo_launch.py robot:=panda device:=joy
 ```
 _3D Phantom_
 ``` bash
