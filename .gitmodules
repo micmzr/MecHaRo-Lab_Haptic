@@ -1,3 +1,0 @@
-[submodule "ws_ros2_haptic/ros-rust/src/tf2_rs"]
-	path = ws_ros2_haptic/ros-rust/src/tf2_rs
-	url = https://github.com/micmzr/tf2_rs.git
