@@ -5,9 +5,9 @@ edition = "2024"
 
 [dependencies]
 rclrs = { git = "https://github.com/micmzr/ros2_rust.git" }
-ros-env = "0.2"
+ros-env = "0.3"
 rosidl_runtime_rs = "0.7"
-tf2_rs = {path = "../../ros-rust/src/tf2_rs"}
+tf2_rs = {git = "https://github.com/micmzr/tf2_rs.git"}
 
 [[bin]]
 name = "joy_servo"
