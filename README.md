@@ -10,9 +10,9 @@ Everything presented here is mean to be run on the PC.
 _Install_
 
 ``` bash
-git clone --recursive -b lyrical https://github.com/micmzr/MecHaRo-Lab_Haptic.git
+git clone -b lyrical https://github.com/micmzr/MecHaRo-Lab_Haptic.git
 cd MecHaRo-Lab_Haptic/ws_ros2_haptic
-colcon build
+colcon build --cargo-args "--release"
 source install/setup.sh
 ```
 
